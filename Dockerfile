@@ -37,7 +37,7 @@ FROM eclipse-temurin:21-jre-alpine
 
 # nginx + supervisord + envsubst + MinIO binary
 RUN apk add --no-cache nginx supervisor gettext wget && \
-    mkdir -p /run/nginx && \
+    mkdir -p /run/nginx /etc/nginx/http.d && \
     wget -qO /usr/local/bin/minio \
       "https://dl.min.io/server/minio/release/linux-amd64/minio" && \
     chmod +x /usr/local/bin/minio
@@ -50,6 +50,8 @@ COPY --from=backend /app/target/*.jar /app/app.jar
 
 # Configuraciones
 COPY nginx-railway.conf /etc/nginx/nginx-railway.conf.template
+# Elimina el virtual host por defecto que trae nginx alpine
+RUN rm -f /etc/nginx/http.d/default.conf 2>/dev/null || true
 COPY supervisord.conf    /etc/supervisord.conf
 COPY startup.sh          /startup.sh
 RUN chmod +x /startup.sh
