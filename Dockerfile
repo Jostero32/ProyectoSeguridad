@@ -35,9 +35,12 @@ RUN mvn package -DskipTests -q
 # ── Stage 3: Imagen final ─────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
 
-# nginx + supervisord + envsubst (para sustituir $PORT en nginx.conf)
-RUN apk add --no-cache nginx supervisor gettext && \
-    mkdir -p /run/nginx
+# nginx + supervisord + envsubst + MinIO binary
+RUN apk add --no-cache nginx supervisor gettext wget && \
+    mkdir -p /run/nginx && \
+    wget -qO /usr/local/bin/minio \
+      "https://dl.min.io/server/minio/release/linux-amd64/minio" && \
+    chmod +x /usr/local/bin/minio
 
 # Estáticos de Angular
 COPY --from=frontend /app/dist/seguridad-front/browser /usr/share/nginx/html
