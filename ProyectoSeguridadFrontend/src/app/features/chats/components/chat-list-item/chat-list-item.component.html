@@ -1,0 +1,73 @@
+<button
+  type="button"
+  class="group flex w-full items-center gap-3 px-3 py-3 text-left transition hover:bg-white/[0.045] sm:px-4"
+  [class.bg-cyan-400/[0.08]]="selected()"
+  (click)="select()"
+>
+  <div class="relative shrink-0">
+    <div
+      class="grid h-[50px] w-[50px] place-items-center overflow-hidden rounded-full bg-gradient-to-br from-cyan-400 via-sky-500 to-indigo-500 text-sm font-black text-white shadow-[0_10px_24px_rgba(14,165,233,0.22)]"
+    >
+      @if (chat().avatarUrl) {
+        <img class="h-full w-full object-cover" [src]="chat().avatarUrl" [alt]="chat().titulo" />
+      } @else {
+        {{ initials() }}
+      }
+    </div>
+
+    @if (chat().tipo === 'INDIVIDUAL') {
+      <span
+        class="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-[#08111f] shadow-[0_0_12px_rgba(52,211,153,0.45)] transition"
+        [class.bg-emerald-400]="chat().counterpartOnline"
+        [class.bg-slate-500]="!chat().counterpartOnline"
+        [class.shadow-none]="!chat().counterpartOnline"
+      ></span>
+    }
+  </div>
+
+  <div class="min-w-0 flex-1 border-b border-white/[0.06] pb-3">
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex min-w-0 items-center gap-2">
+        <h3 class="truncate text-[15px] font-extrabold text-slate-100">
+          {{ chat().titulo }}
+        </h3>
+
+        @if (chat().tipo === 'GRUPO') {
+          <span
+            class="hidden rounded-full border border-cyan-300/20 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-cyan-200 sm:inline-flex"
+          >
+            Grupo
+          </span>
+        }
+      </div>
+
+      <time
+        class="shrink-0 text-[11px] font-bold"
+        [class.text-cyan-300]="chat().noLeidos > 0"
+        [class.text-slate-500]="chat().noLeidos === 0"
+      >
+        {{ formattedTime() }}
+      </time>
+    </div>
+
+    <div class="mt-1 flex items-center justify-between gap-3">
+      <p
+        class="truncate text-[13px] font-semibold"
+        [class.text-slate-400]="chat().noLeidos === 0 && !chat().escribiendo"
+        [class.text-slate-100]="chat().noLeidos > 0 && !chat().escribiendo"
+        [class.text-cyan-300]="chat().escribiendo"
+        [class.italic]="chat().escribiendo"
+      >
+        {{ chat().ultimoMensajeTexto }}
+      </p>
+
+      @if (chat().noLeidos > 0) {
+        <span
+          class="grid min-h-5 min-w-5 place-items-center rounded-full bg-cyan-400 px-1.5 text-[11px] font-black text-slate-950 shadow-[0_8px_18px_rgba(34,211,238,0.25)]"
+        >
+          {{ chat().noLeidos > 99 ? '99+' : chat().noLeidos }}
+        </span>
+      }
+    </div>
+  </div>
+</button>

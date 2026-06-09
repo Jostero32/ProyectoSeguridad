@@ -1,0 +1,94 @@
+<main class="min-h-dvh overflow-hidden bg-[#060b14] text-white">
+  <header
+    class="relative z-30 flex h-[68px] items-center justify-between gap-3 border-b border-white/10 bg-[#08111f]/95 px-3 shadow-[0_16px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:h-[72px] sm:px-5"
+  >
+    <div class="flex min-w-0 items-center gap-3">
+      <div
+        class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-cyan-400 via-sky-500 to-indigo-500 text-white shadow-[0_14px_35px_rgba(14,165,233,0.28)] sm:h-12 sm:w-12"
+      >
+        <span class="material-symbols-outlined text-[27px]">forum</span>
+      </div>
+
+      <div class="min-w-0">
+        <strong
+          class="block truncate text-[16px] font-black tracking-[-0.04em] text-white sm:text-[18px]"
+        >
+          CipherChat
+        </strong>
+        <small class="hidden truncate text-xs font-bold text-slate-400 sm:block">
+          Mensajeria privada en tiempo real
+        </small>
+      </div>
+    </div>
+
+    <div
+      class="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 lg:flex"
+    >
+      <span
+        class="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.9)]"
+      ></span>
+      <p class="m-0 text-xs font-black text-slate-300">Conexion segura</p>
+    </div>
+
+    <div class="flex shrink-0 items-center gap-2">
+      <a
+        routerLink="/messenger/ajustes"
+        routerLinkActive="border-cyan-300/40 bg-cyan-400/10"
+        class="flex min-w-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] p-1 pr-3 text-inherit no-underline transition hover:border-cyan-300/30 hover:bg-cyan-400/10 max-sm:pr-1"
+        title="Perfil y privacidad"
+      >
+        <div
+          class="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-cyan-400 via-sky-500 to-indigo-500 text-sm font-black text-white"
+        >
+          @if (profile()?.urlAvatar) {
+            <img
+              class="h-full w-full object-cover"
+              [src]="profile()?.urlAvatar"
+              [alt]="profile()?.username"
+            />
+          } @else {
+            <span>{{ profile()?.username?.charAt(0)?.toUpperCase() || 'U' }}</span>
+          }
+        </div>
+
+        <div class="min-w-0 text-left max-sm:hidden">
+          <strong class="block max-w-[150px] truncate text-xs font-black text-white">
+            {{ profile()?.username || 'Usuario' }}
+          </strong>
+          <small class="block max-w-[150px] truncate text-[11px] font-bold text-slate-500">
+            {{ profile()?.nombres || '' }} {{ profile()?.apellidos || '' }}
+          </small>
+        </div>
+      </a>
+
+      <a
+        routerLink="/messenger/ajustes"
+        routerLinkActive="border-cyan-300/40 bg-cyan-400/10 text-cyan-200"
+        class="grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] text-slate-300 no-underline transition hover:border-cyan-300/30 hover:bg-cyan-400/10 hover:text-cyan-200 max-sm:hidden"
+        title="Configuracion"
+      >
+        <span class="material-symbols-outlined text-[21px]">settings</span>
+      </a>
+
+      <button
+        type="button"
+        class="grid h-10 w-10 place-items-center rounded-2xl border border-red-300/10 bg-red-500/10 text-red-200 transition hover:bg-red-500/20"
+        title="Cerrar sesion"
+        [disabled]="loggingOut()"
+        (click)="logout()"
+      >
+        @if (loggingOut()) {
+          <span
+            class="h-5 w-5 animate-spin rounded-full border-[3px] border-white/25 border-t-white"
+          ></span>
+        } @else {
+          <span class="material-symbols-outlined text-[21px]">logout</span>
+        }
+      </button>
+    </div>
+  </header>
+
+  <section class="h-[calc(100dvh-68px)] overflow-hidden sm:h-[calc(100dvh-72px)]">
+    <router-outlet />
+  </section>
+</main>

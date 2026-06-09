@@ -1,0 +1,853 @@
+<section class="h-full overflow-hidden bg-[#060b14] text-white">
+  <div
+    class="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[380px_minmax(0,1fr)]"
+    [ngClass]="
+      isDesktopInfoPanelOpen()
+        ? 'xl:grid-cols-[390px_minmax(0,1fr)_280px]'
+        : 'xl:grid-cols-[390px_minmax(0,1fr)]'
+    "
+  >
+    @if (!isMobile() || !mobileChatOpen()) {
+      <div class="min-h-0 border-r border-white/10">
+        <app-chat-sidebar
+          class="min-h-0"
+          [chats]="chats()"
+          [selectedChatId]="selectedChatId()"
+          [loading]="loading()"
+          [totalUnread]="totalUnread()"
+          [searchTerm]="searchTerm()"
+          [activeFilter]="activeChatFilter()"
+          [filters]="chatFilters()"
+          (searchChange)="setSearchTerm($event)"
+          (filterChange)="setChatFilter($event)"
+          (openChat)="openChat($event)"
+          (openNewChat)="openNewChatDialog()"
+          (refresh)="refreshChats()"
+        />
+      </div>
+    }
+
+    @if (!isMobile() || mobileChatOpen()) {
+      <main
+        class="relative flex min-h-0 flex-col overflow-hidden bg-[#0b1424]"
+        (click)="onChatInteraction()"
+        (keydown)="onChatInteraction()"
+        (focusin)="onChatInteraction()"
+      >
+        @if (error()) {
+          <div
+            class="absolute left-1/2 top-4 z-20 w-[min(90%,520px)] -translate-x-1/2 rounded-full border border-red-400/20 bg-red-500/10 px-5 py-3 text-center text-sm font-bold text-red-200 shadow-lg backdrop-blur-xl"
+          >
+            {{ error() }}
+          </div>
+        }
+
+        @if (selectedChat()) {
+          <header
+            class="flex h-[68px] shrink-0 items-center justify-between border-b border-white/10 bg-[#08111f]/95 px-3 backdrop-blur-xl sm:h-[72px] sm:px-5"
+          >
+            <div class="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                class="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-slate-200 transition hover:bg-cyan-400/10 hover:text-cyan-200 lg:hidden"
+                (click)="backToChats()"
+              >
+                <span class="material-symbols-outlined text-[22px]">arrow_back</span>
+              </button>
+
+              <div
+                class="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-cyan-400 via-sky-500 to-indigo-500 text-sm font-black text-white"
+              >
+                @if (selectedChat()?.urlAvatar) {
+                  <img
+                    class="h-full w-full object-cover"
+                    [src]="selectedChat()?.urlAvatar"
+                    [alt]="selectedChat()?.titulo"
+                  />
+                } @else {
+                  {{ selectedChat()?.titulo?.charAt(0) }}
+                }
+              </div>
+
+              <div class="min-w-0">
+                <h2 class="truncate text-[15px] font-black text-white sm:text-base">
+                  {{ selectedChat()?.titulo }}
+                </h2>
+
+                <p class="mt-0.5 truncate text-xs font-semibold text-slate-500">
+                  {{ selectedChatPresenceLabel() }}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1 sm:gap-2">
+              <button
+                type="button"
+                class="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-cyan-200 transition hover:bg-cyan-400/10 xl:hidden"
+                (click)="openChatInfoPanel()"
+              >
+                <span class="material-symbols-outlined text-[21px]">info</span>
+              </button>
+
+              <div class="relative">
+                <button
+                  #chatActionsTrigger
+                  type="button"
+                  class="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-cyan-200 transition hover:bg-cyan-400/10"
+                  (click)="toggleActionsMenu($event)"
+                >
+                  <span class="material-symbols-outlined text-[21px]">more_vert</span>
+                </button>
+
+                @if (actionsMenuOpen()) {
+                  <div
+                    #chatActionsMenu
+                    class="absolute right-0 top-[46px] z-40 w-[260px] rounded-2xl border border-white/10 bg-[#08111f]/98 p-2 shadow-[0_22px_36px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+                  >
+                    <button
+                      type="button"
+                      class="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-bold text-slate-200 transition hover:bg-white/[0.06]"
+                      (click)="openChatInfoPanel()"
+                    >
+                      <span>Info del chat</span>
+                      <span class="material-symbols-outlined text-[18px]">info</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="mt-1 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-bold text-slate-200 transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
+                      [disabled]="loadingChatConfig() || isActionBusy() || !chatConfig()"
+                      (click)="togglePinStatus()"
+                    >
+                      <span>{{ chatConfig()?.fijado ? 'Desfijar chat' : 'Fijar chat' }}</span>
+                      <span class="material-symbols-outlined text-[18px]">keep</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="mt-1 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-bold text-slate-200 transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
+                      [disabled]="loadingChatConfig() || isActionBusy() || !chatConfig()"
+                      (click)="toggleMuteStatus()"
+                    >
+                      <span>{{ chatConfig()?.silenciado ? 'Activar notificaciones' : 'Silenciar chat' }}</span>
+                      <span class="material-symbols-outlined text-[18px]">notifications_off</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="mt-1 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-bold text-slate-200 transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
+                      [disabled]="loadingChatConfig() || isActionBusy() || !chatConfig()"
+                      (click)="toggleArchiveStatus()"
+                    >
+                      <span>{{ chatConfig()?.archivado ? 'Desarchivar chat' : 'Archivar chat' }}</span>
+                      <span class="material-symbols-outlined text-[18px]">archive</span>
+                    </button>
+
+                    @if (isIndividualChat()) {
+                      <button
+                        type="button"
+                        class="mt-1 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-bold transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        [class.text-red-300]="!isCounterpartBlocked()"
+                        [class.text-emerald-300]="isCounterpartBlocked()"
+                        [disabled]="loadingCounterpart() || loadingBlockedUsers() || isActionBusy()"
+                        (click)="toggleBlockStatus()"
+                      >
+                        <span>{{ isCounterpartBlocked() ? 'Desbloquear contacto' : 'Bloquear contacto' }}</span>
+                        <span class="material-symbols-outlined text-[18px]">
+                          {{ isCounterpartBlocked() ? 'lock_open' : 'block' }}
+                        </span>
+                      </button>
+                    }
+
+                    @if (loadingChatConfig() || loadingCounterpart() || loadingBlockedUsers()) {
+                      <p class="mt-2 px-2 text-[11px] font-semibold text-slate-500">Cargando opciones...</p>
+                    }
+
+                    @if (chatActionsError()) {
+                      <p class="mt-2 rounded-lg bg-red-500/10 px-2 py-1.5 text-[11px] font-bold text-red-200">
+                        {{ chatActionsError() }}
+                      </p>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </header>
+
+          @if (shouldShowSecurityBanner()) {
+            <div
+              class="mx-3 mt-2 rounded-2xl border border-amber-300/20 bg-amber-400/10 px-3 py-3 text-amber-100 sm:mx-5"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="m-0 text-[13px] font-black">Contacto nuevo</p>
+                  <p class="m-0 mt-1 text-xs font-semibold leading-5 text-amber-100/90">
+                    Si no conoces a este contacto, puedes bloquearlo o limitar este chat para proteger tu cuenta.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  class="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-amber-200/20 bg-black/10 text-amber-100 transition hover:bg-black/20"
+                  (click)="dismissSecurityBanner()"
+                >
+                  <span class="material-symbols-outlined text-[17px]">close</span>
+                </button>
+              </div>
+
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="rounded-full border border-red-300/30 bg-red-500/15 px-3 py-1.5 text-xs font-black text-red-100 transition hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                  [disabled]="isActionBusy() || loadingBlockedUsers() || loadingCounterpart()"
+                  (click)="toggleBlockStatus()"
+                >
+                  {{ isCounterpartBlocked() ? 'Desbloquear' : 'Bloquear' }}
+                </button>
+
+                <button
+                  type="button"
+                  class="rounded-full border border-white/20 bg-white/[0.08] px-3 py-1.5 text-xs font-black text-white transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50"
+                  [disabled]="isActionBusy() || loadingChatConfig() || !chatConfig()"
+                  (click)="toggleMuteStatus()"
+                >
+                  {{ chatConfig()?.silenciado ? 'Activar' : 'Silenciar' }}
+                </button>
+
+                <button
+                  type="button"
+                  class="rounded-full border border-white/20 bg-white/[0.08] px-3 py-1.5 text-xs font-black text-white transition hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-50"
+                  [disabled]="isActionBusy() || loadingChatConfig() || !chatConfig()"
+                  (click)="toggleArchiveStatus()"
+                >
+                  {{ chatConfig()?.archivado ? 'Desarchivar' : 'Archivar' }}
+                </button>
+              </div>
+            </div>
+          }
+
+          <section
+            #messagesContainer
+            class="min-h-0 flex-1 overflow-y-auto bg-[#0b1424] px-3 py-4 sm:px-5"
+            [ngStyle]="chatBackgroundStyle()"
+            (scroll)="onMessagesScroll($event)"
+          >
+            @if (loadingDetail() || loadingMessages()) {
+              <div class="grid h-full place-items-center">
+                <div class="text-center">
+                  <div
+                    class="mx-auto h-10 w-10 animate-spin rounded-full border-[3px] border-white/15 border-t-cyan-300"
+                  ></div>
+                  <p class="mt-4 text-sm font-bold text-slate-400">Cargando conversacion...</p>
+                </div>
+              </div>
+            } @else if (messagesError()) {
+              <div
+                class="mx-auto mt-8 w-full max-w-[540px] rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-sm font-semibold text-red-200"
+              >
+                {{ messagesError() }}
+              </div>
+            } @else if (messages().length === 0) {
+              <div class="grid h-full place-items-center px-5 text-center">
+                <div class="max-w-[420px]">
+                  <div
+                    class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-cyan-400/10 text-cyan-300"
+                  >
+                    <span class="material-symbols-outlined text-[30px]">chat_bubble</span>
+                  </div>
+
+                  <h3 class="mt-4 text-xl font-black text-white">Sin mensajes todavia</h3>
+
+                  <p class="mt-2 text-sm leading-7 text-slate-400">
+                    Escribe el primer mensaje para iniciar la conversacion.
+                  </p>
+                </div>
+              </div>
+            } @else {
+              <div class="space-y-3 pb-2">
+                @if (loadingOlderMessages()) {
+                  <div class="flex items-center justify-center py-1">
+                    <span
+                      class="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-cyan-300"
+                    ></span>
+                    <span class="ml-2 text-xs font-bold text-slate-400">Cargando mensajes anteriores...</span>
+                  </div>
+                }
+
+                @for (message of messages(); track message.id; let index = $index) {
+                  @if (shouldShowDaySeparator(index)) {
+                    <div class="my-2 flex items-center justify-center">
+                      <span
+                        class="rounded-full border border-white/10 bg-[#08111f]/85 px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-slate-400"
+                      >
+                        {{ getDaySeparatorLabel(message) }}
+                      </span>
+                    </div>
+                  }
+
+                  <article
+                    class="w-fit max-w-[78%] rounded-2xl px-4 py-2.5 shadow-[0_10px_22px_rgba(0,0,0,0.2)]"
+                    [class.ml-auto]="isOwnMessage(message)"
+                    [class.bg-cyan-400]="isOwnMessage(message)"
+                    [class.text-slate-950]="isOwnMessage(message)"
+                    [class.bg-white/[0.07]]="!isOwnMessage(message)"
+                    [class.text-slate-100]="!isOwnMessage(message)"
+                  >
+                    @if (message.tipo === 'TEXTO') {
+                      <p class="m-0 whitespace-pre-wrap break-words text-sm font-semibold leading-6">
+                        {{ getMessageText(message) }}
+                      </p>
+                    } @else if (isMediaMessage(message)) {
+                      @if (isImageMessage(message) && getAttachmentPreviewUrl(message)) {
+                        <img
+                          class="max-h-[320px] w-full rounded-xl object-contain"
+                          [src]="getAttachmentPreviewUrl(message)"
+                          [alt]="getMessageText(message)"
+                        />
+                      } @else if (isVideoMessage(message) && getAttachmentPreviewUrl(message)) {
+                        <video
+                          class="max-h-[320px] w-full rounded-xl"
+                          controls
+                          preload="metadata"
+                          [src]="getAttachmentPreviewUrl(message)"
+                        ></video>
+                      } @else if (isAudioMessage(message) && getAttachmentPreviewUrl(message)) {
+                        <audio class="w-full" controls [src]="getAttachmentPreviewUrl(message)"></audio>
+                      }
+
+                      <div class="mt-2 flex items-center justify-between gap-3 rounded-xl bg-black/10 px-3 py-2">
+                        <p class="m-0 truncate text-xs font-bold">
+                          {{ getMessageText(message) }}
+                        </p>
+
+                        @if (getAttachmentDownloadUrl(message)) {
+                          <a
+                            class="shrink-0 rounded-full border border-white/20 px-3 py-1 text-[11px] font-black no-underline transition hover:bg-white/10"
+                            [href]="getAttachmentDownloadUrl(message)"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Descargar
+                          </a>
+                        } @else if (isResolvingAttachment(message.id)) {
+                          <span class="text-[11px] font-bold opacity-70">Preparando...</span>
+                        } @else {
+                          <span class="text-[11px] font-bold opacity-70">No disponible</span>
+                        }
+                      </div>
+                    } @else {
+                      <p class="m-0 whitespace-pre-wrap break-words text-sm font-semibold leading-6">
+                        {{ getMessageText(message) }}
+                      </p>
+                    }
+
+                    <div class="mt-1 text-right text-[11px] font-bold opacity-80">
+                      {{ formatMessageTime(message.creadoEn) }}
+                      @if (isOwnMessage(message)) {
+                        <span
+                          class="ml-1 inline-flex items-center align-middle"
+                          [attr.title]="getOwnMessageStatusLabel(message)"
+                          [attr.aria-label]="getOwnMessageStatusLabel(message)"
+                        >
+                          <span
+                            class="material-symbols-outlined text-[15px] leading-none"
+                            [class.text-sky-700]="isOwnMessageStatusRead(message)"
+                            [class.text-slate-700]="!isOwnMessageStatusRead(message)"
+                          >
+                            {{ getOwnMessageStatusIcon(message) }}
+                          </span>
+                        </span>
+                      }
+                    </div>
+                  </article>
+                }
+              </div>
+            }
+          </section>
+
+          <footer class="shrink-0 border-t border-white/10 bg-[#08111f]/95 px-3 pb-3 pt-2 backdrop-blur-xl sm:px-4">
+            <div class="mb-1 h-5 px-1 text-xs font-semibold text-cyan-300/90">
+              @if (typingIndicatorText()) {
+                <span>{{ typingIndicatorText() }}</span>
+              } @else {
+                <span class="opacity-0">placeholder</span>
+              }
+            </div>
+
+            @if (selectedAttachment()) {
+              <div class="mb-2 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-2.5">
+                @if (selectedAttachmentPreviewUrl()) {
+                  <img
+                    class="h-12 w-12 rounded-lg object-cover"
+                    [src]="selectedAttachmentPreviewUrl()"
+                    [alt]="selectedAttachment()?.name"
+                  />
+                } @else {
+                  <span
+                    class="material-symbols-outlined grid h-12 w-12 place-items-center rounded-lg bg-white/5 text-slate-300"
+                  >
+                    attach_file
+                  </span>
+                }
+
+                <div class="min-w-0 flex-1">
+                  <p class="m-0 truncate text-sm font-bold text-white">{{ selectedAttachment()?.name }}</p>
+                  <p class="m-0 text-xs font-semibold text-slate-400">
+                    {{ formatBytes(selectedAttachment()?.size || 0) }}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  class="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-red-500/10 hover:text-red-200"
+                  (click)="clearSelectedAttachment()"
+                >
+                  <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              </div>
+            }
+
+            @if (isMessagingBlocked()) {
+              <div class="mb-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+                @if (isCounterpartBlocked()) {
+                  <div class="flex items-center justify-between gap-3">
+                    <p class="m-0 text-xs font-bold text-slate-200">
+                      Has bloqueado este contacto. Desbloquéalo para enviar mensajes.
+                    </p>
+
+                    <button
+                      type="button"
+                      class="shrink-0 rounded-full border border-emerald-300/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-black text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                      [disabled]="isActionBusy() || loadingBlockedUsers() || loadingCounterpart()"
+                      (click)="toggleBlockStatus()"
+                    >
+                      Desbloquear
+                    </button>
+                  </div>
+                } @else {
+                  <p class="m-0 text-xs font-bold text-slate-200">
+                    No puedes enviar mensajes a este usuario en este momento.
+                  </p>
+                }
+              </div>
+            }
+
+            <div class="flex h-[58px] items-center gap-2 sm:gap-3">
+              <input
+                #attachmentInput
+                class="hidden"
+                type="file"
+                accept="image/*,audio/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain"
+                (change)="onAttachmentSelected($event)"
+              />
+
+              <button
+                type="button"
+                class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-cyan-300 transition hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:text-slate-600 disabled:hover:bg-transparent"
+                [disabled]="loadingDetail() || sendingMessage() || isMessagingBlocked()"
+                (click)="attachmentInput.click()"
+              >
+                <span class="material-symbols-outlined text-[23px]">attach_file</span>
+              </button>
+
+              <div
+                class="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-full border border-white/10 bg-white/[0.045] px-4"
+              >
+                <input
+                  class="h-full min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-slate-500"
+                  type="text"
+                  [placeholder]="
+                    isMessagingBlocked() ? 'No puedes enviar mensajes en este chat' : 'Escribe un mensaje...'
+                  "
+                  [ngModel]="messageDraft()"
+                  (ngModelChange)="onMessageDraftChange($event)"
+                  (keydown)="onDraftKeydown($event)"
+                  [disabled]="loadingDetail() || sendingMessage() || isMessagingBlocked()"
+                />
+
+                <span
+                  class="material-symbols-outlined hidden text-[21px] text-cyan-300 sm:inline-block"
+                >
+                  mood
+                </span>
+              </div>
+
+              <button
+                type="button"
+                class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-cyan-400 text-slate-950 shadow-[0_12px_28px_rgba(34,211,238,0.2)] disabled:cursor-not-allowed disabled:opacity-50"
+                [disabled]="!canSendMessage()"
+                (click)="sendMessage()"
+              >
+                @if (sendingMessage()) {
+                  <span
+                    class="h-5 w-5 animate-spin rounded-full border-[3px] border-slate-900/30 border-t-slate-900"
+                  ></span>
+                } @else {
+                  <span class="material-symbols-outlined text-[21px]">send</span>
+                }
+              </button>
+            </div>
+          </footer>
+        } @else {
+          <div class="hidden h-full place-items-center px-6 text-center lg:grid">
+            <div class="max-w-[520px]">
+              <div
+                class="mx-auto grid h-20 w-20 place-items-center rounded-3xl bg-cyan-400/10 text-cyan-300"
+              >
+                <span class="material-symbols-outlined text-[42px]">chat</span>
+              </div>
+
+              <h2 class="mt-6 text-3xl font-black tracking-[-0.06em] text-white">
+                Bienvenido a CipherChat
+              </h2>
+
+              <p class="mt-3 text-sm leading-7 text-slate-400">
+                Selecciona una conversacion o busca un usuario para iniciar un chat.
+              </p>
+
+              <button
+                type="button"
+                class="mt-6 rounded-full bg-cyan-400 px-6 py-3.5 text-sm font-black text-slate-950 shadow-[0_12px_28px_rgba(34,211,238,0.2)] transition hover:bg-cyan-300"
+                (click)="openNewChatDialog()"
+              >
+                Iniciar nuevo chat
+              </button>
+            </div>
+          </div>
+        }
+      </main>
+    }
+
+    <ng-template #chatInfoPanelContent>
+      @if (selectedChat()) {
+        <div class="flex h-full min-h-0 flex-col">
+          <div class="shrink-0 border-b border-white/10 px-4 pb-2.5 pt-2.5 sm:px-5">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex min-w-0 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <button
+                type="button"
+                class="shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.05em] transition"
+                [class.border-cyan-300/40]="chatInfoSection() === 'RESUMEN'"
+                [class.bg-cyan-400/20]="chatInfoSection() === 'RESUMEN'"
+                [class.text-cyan-100]="chatInfoSection() === 'RESUMEN'"
+                [class.border-white/10]="chatInfoSection() !== 'RESUMEN'"
+                [class.bg-white/[0.04]]="chatInfoSection() !== 'RESUMEN'"
+                [class.text-slate-300]="chatInfoSection() !== 'RESUMEN'"
+                (click)="setChatInfoSection('RESUMEN')"
+              >
+                Resumen
+              </button>
+
+              <button
+                type="button"
+                class="shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.05em] transition"
+                [class.border-cyan-300/40]="chatInfoSection() === 'PERSONALIZAR'"
+                [class.bg-cyan-400/20]="chatInfoSection() === 'PERSONALIZAR'"
+                [class.text-cyan-100]="chatInfoSection() === 'PERSONALIZAR'"
+                [class.border-white/10]="chatInfoSection() !== 'PERSONALIZAR'"
+                [class.bg-white/[0.04]]="chatInfoSection() !== 'PERSONALIZAR'"
+                [class.text-slate-300]="chatInfoSection() !== 'PERSONALIZAR'"
+                (click)="setChatInfoSection('PERSONALIZAR')"
+              >
+                Personalizar
+              </button>
+
+              <button
+                type="button"
+                class="shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.05em] transition"
+                [class.border-cyan-300/40]="chatInfoSection() === 'GESTION'"
+                [class.bg-cyan-400/20]="chatInfoSection() === 'GESTION'"
+                [class.text-cyan-100]="chatInfoSection() === 'GESTION'"
+                [class.border-white/10]="chatInfoSection() !== 'GESTION'"
+                [class.bg-white/[0.04]]="chatInfoSection() !== 'GESTION'"
+                [class.text-slate-300]="chatInfoSection() !== 'GESTION'"
+                (click)="setChatInfoSection('GESTION')"
+              >
+                Gestion
+              </button>
+              </div>
+
+              <button
+                type="button"
+                class="hidden h-8 w-8 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-slate-200 transition hover:bg-white/[0.1] xl:grid"
+                (click)="closeChatInfoPanel()"
+                title="Cerrar panel"
+              >
+                <span class="material-symbols-outlined text-[17px]">close</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+            @if (chatInfoSection() === 'RESUMEN') {
+              <div class="text-center">
+                <div
+                  class="mx-auto grid h-16 w-16 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-cyan-400 via-sky-500 to-indigo-500 text-xl font-black text-white"
+                >
+                  @if (selectedChat()?.urlAvatar) {
+                    <img
+                      class="h-full w-full object-cover"
+                      [src]="selectedChat()?.urlAvatar"
+                      [alt]="selectedChat()?.titulo"
+                    />
+                  } @else {
+                    {{ selectedChat()?.titulo?.charAt(0) }}
+                  }
+                </div>
+
+                <h3 class="mt-3 text-base font-black tracking-[-0.03em] text-white">
+                  {{ selectedChat()?.titulo }}
+                </h3>
+
+                <p class="mt-1 text-xs font-semibold text-slate-500">
+                  {{ selectedChat()?.tipo === 'GRUPO' ? 'Grupo' : 'Chat individual' }}
+                </p>
+              </div>
+
+              <div class="mt-4 grid grid-cols-3 gap-1.5">
+                <div class="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-center">
+                  <p class="m-0 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Media</p>
+                  <p class="m-0 mt-1 text-xs font-black text-white">{{ chatMediaCount() }}</p>
+                </div>
+
+                <div class="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-center">
+                  <p class="m-0 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Archivos</p>
+                  <p class="m-0 mt-1 text-xs font-black text-white">{{ chatDocumentCount() }}</p>
+                </div>
+
+                <div class="rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-center">
+                  <p class="m-0 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Links</p>
+                  <p class="m-0 mt-1 text-xs font-black text-white">{{ chatSharedLinks().length }}</p>
+                </div>
+              </div>
+
+              @if (chatSharedLinks().length > 0) {
+                <div class="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                  <p class="m-0 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">
+                    Links recientes
+                  </p>
+                  <div class="mt-2 space-y-1.5">
+                    @for (link of chatSharedLinks(); track link) {
+                      <a
+                        class="block truncate text-xs font-semibold text-cyan-200 no-underline hover:text-cyan-100"
+                        [href]="link"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {{ link }}
+                      </a>
+                    }
+                  </div>
+                </div>
+              }
+            }
+
+            @if (chatInfoSection() === 'PERSONALIZAR') {
+              <div class="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                <p class="m-0 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Notificaciones</p>
+                <p class="m-0 mt-1 text-xs font-semibold text-slate-300">{{ muteStatusLabel() }}</p>
+
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    class="rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-black text-slate-200 transition hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-50"
+                    [disabled]="loadingChatConfig() || isActionBusy() || !chatConfig()"
+                    (click)="muteForHours(8)"
+                  >
+                    Silenciar 8 h
+                  </button>
+
+                  <button
+                    type="button"
+                    class="rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-black text-slate-200 transition hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-50"
+                    [disabled]="loadingChatConfig() || isActionBusy() || !chatConfig()"
+                    (click)="muteForDays(7)"
+                  >
+                    Silenciar 1 sem
+                  </button>
+
+                  <button
+                    type="button"
+                    class="rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-black text-slate-200 transition hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:opacity-50"
+                    [disabled]="loadingChatConfig() || isActionBusy() || !chatConfig()"
+                    (click)="muteForever()"
+                  >
+                    Silenciar siempre
+                  </button>
+
+                  <button
+                    type="button"
+                    class="rounded-xl border border-cyan-300/25 bg-cyan-400/10 px-3 py-2 text-xs font-black text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    [disabled]="loadingChatConfig() || isActionBusy() || !chatConfig() || !chatConfig()?.silenciado"
+                    (click)="unmuteChat()"
+                  >
+                    Quitar silencio
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                <p class="m-0 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Fondo del chat</p>
+                <div class="mt-3 grid grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    class="h-10 rounded-xl border transition"
+                    [class.border-cyan-300]="isChatBackgroundActive('ocean')"
+                    [class.border-white/10]="!isChatBackgroundActive('ocean')"
+                    [ngStyle]="{
+                      'background-color': isChatBackgroundActive('ocean') ? 'rgba(34,211,238,0.20)' : '#0d1b2f',
+                    }"
+                    (click)="setChatBackground('ocean')"
+                    title="Ocean"
+                  ></button>
+                  <button
+                    type="button"
+                    class="h-10 rounded-xl border transition"
+                    [class.border-cyan-300]="isChatBackgroundActive('sunset')"
+                    [class.border-white/10]="!isChatBackgroundActive('sunset')"
+                    [ngStyle]="{
+                      'background-color': isChatBackgroundActive('sunset') ? 'rgba(253,186,116,0.25)' : '#2a1121',
+                    }"
+                    (click)="setChatBackground('sunset')"
+                    title="Sunset"
+                  ></button>
+                  <button
+                    type="button"
+                    class="h-10 rounded-xl border transition"
+                    [class.border-cyan-300]="isChatBackgroundActive('forest')"
+                    [class.border-white/10]="!isChatBackgroundActive('forest')"
+                    [ngStyle]="{
+                      'background-color': isChatBackgroundActive('forest') ? 'rgba(110,231,183,0.25)' : '#0f2118',
+                    }"
+                    (click)="setChatBackground('forest')"
+                    title="Forest"
+                  ></button>
+                  <button
+                    type="button"
+                    class="h-10 rounded-xl border transition"
+                    [class.border-cyan-300]="isChatBackgroundActive('slate')"
+                    [class.border-white/10]="!isChatBackgroundActive('slate')"
+                    [ngStyle]="{
+                      'background-color': isChatBackgroundActive('slate') ? 'rgba(203,213,225,0.25)' : '#1a2230',
+                    }"
+                    (click)="setChatBackground('slate')"
+                    title="Slate"
+                  ></button>
+                </div>
+              </div>
+            }
+
+            @if (chatInfoSection() === 'GESTION') {
+              <div class="space-y-2">
+                <button
+                  type="button"
+                  class="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-slate-200 transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-50"
+                  [disabled]="loadingChatConfig() || isActionBusy() || !chatConfig()"
+                  (click)="toggleArchiveStatus()"
+                >
+                  <span>{{ chatConfig()?.archivado ? 'Desarchivar chat' : 'Archivar chat' }}</span>
+                  <span class="material-symbols-outlined text-[19px]">archive</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-black text-slate-200 transition hover:bg-white/[0.1] disabled:cursor-not-allowed disabled:opacity-50"
+                  [disabled]="loadingChatConfig() || isActionBusy() || !chatConfig()"
+                  (click)="togglePinStatus()"
+                >
+                  <span>{{ chatConfig()?.fijado ? 'Desfijar chat' : 'Fijar chat' }}</span>
+                  <span class="material-symbols-outlined text-[19px]">keep</span>
+                </button>
+
+                @if (isIndividualChat()) {
+                  <button
+                    type="button"
+                    class="flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50"
+                    [class.border-red-300/20]="!isCounterpartBlocked()"
+                    [class.bg-red-500/10]="!isCounterpartBlocked()"
+                    [class.text-red-100]="!isCounterpartBlocked()"
+                    [class.border-emerald-300/20]="isCounterpartBlocked()"
+                    [class.bg-emerald-500/10]="isCounterpartBlocked()"
+                    [class.text-emerald-100]="isCounterpartBlocked()"
+                    [disabled]="loadingCounterpart() || loadingBlockedUsers() || isActionBusy()"
+                    (click)="toggleBlockStatus()"
+                  >
+                    <span>{{ isCounterpartBlocked() ? 'Desbloquear contacto' : 'Bloquear contacto' }}</span>
+                    <span class="material-symbols-outlined text-[19px]">
+                      {{ isCounterpartBlocked() ? 'lock_open' : 'block' }}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="flex w-full items-center justify-between rounded-2xl border border-red-300/20 bg-red-500/10 px-4 py-3 text-sm font-black text-red-100 transition hover:bg-red-500/20"
+                    (click)="reportChat()"
+                  >
+                    <span>Reportar contacto</span>
+                    <span class="material-symbols-outlined text-[19px]">flag</span>
+                  </button>
+                }
+              </div>
+            }
+
+            @if (loadingChatConfig() || loadingCounterpart() || loadingBlockedUsers()) {
+              <p class="mt-3 text-xs font-semibold text-slate-500">Actualizando datos del chat...</p>
+            }
+
+            @if (chatActionsError()) {
+              <p class="mt-3 rounded-xl border border-red-300/20 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-200">
+                {{ chatActionsError() }}
+              </p>
+            }
+          </div>
+        </div>
+      } @else {
+        <div class="grid h-full place-items-center text-center">
+          <p class="text-sm font-bold text-slate-500">Selecciona un chat para ver detalles.</p>
+        </div>
+      }
+    </ng-template>
+
+    @if (isDesktopInfoPanelOpen()) {
+      <aside class="hidden min-h-0 overflow-hidden border-l border-white/10 bg-[#08111f] text-white xl:flex xl:flex-col">
+        <ng-container [ngTemplateOutlet]="chatInfoPanelContent"></ng-container>
+      </aside>
+    }
+  </div>
+
+  @if (isInfoOverlayOpen()) {
+    <div class="fixed inset-0 z-50 xl:hidden">
+      <button
+        type="button"
+        class="absolute inset-0 bg-slate-950/70"
+        (click)="closeChatInfoPanel()"
+        aria-label="Cerrar panel"
+      ></button>
+
+      <aside
+        class="absolute inset-y-0 right-0 flex w-[min(92vw,360px)] min-h-0 flex-col border-l border-white/10 bg-[#08111f] text-white shadow-[0_24px_48px_rgba(0,0,0,0.45)]"
+      >
+        <header class="flex h-[62px] items-center justify-between border-b border-white/10 px-4">
+          <h3 class="text-sm font-black uppercase tracking-[0.08em] text-slate-200">Info del chat</h3>
+
+          <button
+            type="button"
+            class="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-slate-200 transition hover:bg-white/[0.1]"
+            (click)="closeChatInfoPanel()"
+          >
+            <span class="material-symbols-outlined text-[19px]">close</span>
+          </button>
+        </header>
+
+        <ng-container [ngTemplateOutlet]="chatInfoPanelContent"></ng-container>
+      </aside>
+    </div>
+  }
+
+  @if (newChatDialogOpen()) {
+    <app-user-search-dialog
+      (close)="closeNewChatDialog()"
+      (selectUser)="createIndividualChat($event)"
+    />
+  }
+</section>
