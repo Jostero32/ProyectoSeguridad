@@ -114,7 +114,5 @@ El detalle completo (entidades, servicios y endpoints) está en
 
 ## Historial
 
-El backend y el frontend se desarrollaron primero en repositorios separados, que conservan las ramas y
-pull requests de cada funcionalidad:
-[ProyectoSeguridadBackend](https://github.com/Jostero32/ProyectoSeguridadBackend) y
-[ProyectoSeguridadFrontend](https://github.com/Jostero32/ProyectoSeguridadFrontend) (archivados).
+El backend y el frontend se desarrollaron primero en repositorios separados, con una rama y un pull
+request por funcionalidad (usuarios, chats, login). Este repositorio reúne la versión final de ambos.
