@@ -32,15 +32,18 @@ RUN mvn dependency:go-offline -q
 COPY ProyectoSeguridadBackend/src ./src
 RUN mvn package -DskipTests -q
 
-# ── Stage 3: Imagen final ─────────────────────────────────────────
+# ── Stage 3: binario de MinIO ─────────────────────────────────────
+# dl.min.io dejó de publicar el binario (HTTP 410). Se toma del fork
+# comunitario pgsty/minio, fijado a un release: mismo binario y API S3.
+FROM pgsty/minio:RELEASE.2026-08-04T00-00-00Z AS minio
+
+# ── Stage 4: Imagen final ─────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
 
-# nginx + supervisord + envsubst + MinIO binary
-RUN apk add --no-cache nginx supervisor gettext wget && \
-    mkdir -p /run/nginx /etc/nginx/http.d && \
-    wget -qO /usr/local/bin/minio \
-      "https://dl.min.io/server/minio/release/linux-amd64/minio" && \
-    chmod +x /usr/local/bin/minio
+# nginx + supervisord + envsubst
+RUN apk add --no-cache nginx supervisor gettext && \
+    mkdir -p /run/nginx /etc/nginx/http.d
+COPY --from=minio /usr/bin/minio /usr/local/bin/minio
 
 # Estáticos de Angular
 COPY --from=frontend /app/dist/seguridad-front/browser /usr/share/nginx/html

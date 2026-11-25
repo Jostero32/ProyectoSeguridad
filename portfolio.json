@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "titulo": "CipherChat",
+  "resumen": "Mensajería en tiempo real al estilo WhatsApp con cifrado simétrico configurable en tres capas: datos en reposo, API REST y WebSocket (AES-GCM, DES-CBC, ChaCha20).",
+  "categorias": ["fullstack", "seguridad"],
+  "stack": ["Angular", "Spring Boot", "Java 21", "PostgreSQL", "MinIO", "WebSocket", "STOMP", "Docker"],
+  "estado": "Funcional",
+  "destacado": true,
+  "anio": 2026,
+  "rol": "Desarrollo full stack",
+  "portada": "docs/img/chat.png",
+  "capturas": ["docs/img/chat.png", "docs/img/login.png"],
+  "aspectos": [
+    "Tres capas de cifrado intercambiables por variables de entorno",
+    "Sobre cifrado {iv, datos} en cada petición REST con filtro y advice de Spring",
+    "Mensajes, presencia y «escribiendo…» por STOMP cifrado",
+    "Multimedia en MinIO con URL prefirmadas; sesiones por dispositivo"
+  ],
+  "demo": null
+}
