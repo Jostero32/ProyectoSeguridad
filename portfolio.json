@@ -6,6 +6,7 @@
   "stack": ["Angular", "Spring Boot", "Java 21", "PostgreSQL", "MinIO", "WebSocket", "STOMP", "Docker"],
   "estado": "Funcional",
   "destacado": true,
+  "orden": 3,
   "anio": 2026,
   "rol": "Desarrollo full stack",
   "portada": "docs/img/chat.png",
